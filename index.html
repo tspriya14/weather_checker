@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Weather App</title>
+  <style>
+    :root{
+      --bg: #0f172a;
+      --card: #0b1220;
+      --accent: #06b6d4;
+      --muted: #94a3b8;
+      --glass: rgba(255,255,255,0.03);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+      background:linear-gradient(180deg, #071029 0%, #07122a 60%);
+      color:#e6eef7;
+      padding:24px;
+    }
+
+    .app{
+      width:100%;
+      max-width:920px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:14px;
+      padding:20px;
+      box-shadow:0 8px 30px rgba(2,6,23,0.6);
+      border:1px solid rgba(255,255,255,0.03);
+    }
+
+    header{
+      display:flex;
+      gap:16px;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:14px;
+    }
+    h1{font-size:20px;margin:0}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+
+    form{
+      display:flex;
+      gap:8px;
+      margin-top:12px;
+    }
+    input[type="text"]{
+      flex:1;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.05);
+      background:var(--glass);
+      color:inherit;
+      font-size:15px;
+    }
+    button{
+      padding:10px 14px;
+      border-radius:10px;
+      border:0;
+      background:linear-gradient(90deg,var(--accent),#7dd3fc);
+      color:#04202a;
+      font-weight:600;
+      cursor:pointer;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 360px;
+      gap:18px;
+      margin-top:18px;
+    }
+
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+      padding:18px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,0.025);
+    }
+
+    .main-weather{
+      display:flex;
+      gap:18px;
+      align-items:center;
+    }
+    .temp {font-size:48px; font-weight:700}
+    .cond{font-size:16px;color:var(--muted)}
+
+    .meta{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap}
+    .meta .item{background:rgba(255,255,255,0.02);padding:8px 10px;border-radius:8px;font-size:13px}
+
+    .right-col{display:flex;flex-direction:column;gap:12px}
+    .small{font-size:13px;color:var(--muted)}
+
+    .aqi{display:flex;gap:8px;align-items:center}
+    .aqi .dot{width:14px;height:14px;border-radius:50%}
+
+    .loading{opacity:0.9;padding:10px;border-radius:8px;background:rgba(255,255,255,0.02);font-size:14px}
+
+    .note{color:var(--muted);font-size:13px;margin-top:8px}
+
+    footer{margin-top:14px;text-align:right;color:var(--muted);font-size:12px}
+
+    @media (max-width:900px){
+      .grid{grid-template-columns:1fr;}
+      .right-col{order:2}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>Weather App</h1>
+        <p class="lead">Type a city, ZIP/postal code or coordinates (lat,lon) and press Search.</p>
+      </div>
+      <div class="small">Powered by WeatherAPI</div>
+    </header>
+
+    <form id="searchForm">
+      <input id="locationInput" type="text" placeholder="e.g. London or 10001 or 48.8566,2.3522" value="London" required />
+      <button type="submit">Search</button>
+    </form>
+
+    <div class="grid">
+      <div class="card" id="resultCard">
+        <div id="loading" class="loading" style="display:none">Loading...</div>
+
+        <div id="main" style="display:none">
+          <div class="main-weather">
+            <div>
+              <div class="temp" id="tempC">--°C</div>
+              <div class="cond" id="conditionText">--</div>
+            </div>
+            <div style="margin-left:auto;text-align:center">
+              <img id="condIcon" src="" alt="icon" width="96" height="96" style="image-rendering:pixelated;" />
+              <div class="small" id="localTime">Local time: --</div>
+            </div>
+          </div>
+
+          <div class="meta">
+            <div class="item">Feels like: <strong id="feelslike">--°C</strong></div>
+            <div class="item">Humidity: <strong id="humidity">--%</strong></div>
+            <div class="item">Wind: <strong id="wind">-- kph</strong></div>
+            <div class="item">Visibility: <strong id="vis">-- km</strong></div>
+            <div class="item">UV index: <strong id="uv">--</strong></div>
+            <div class="item">Cloud: <strong id="cloud">--%</strong></div>
+          </div>
+
+          <div style="margin-top:12px">
+            <strong id="locationName">--</strong>
+            <div class="note" id="lastUpdated">--</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="right-col">
+        <div class="card" id="airCard" style="display:none">
+          <h3 style="margin-top:0;margin-bottom:8px">Air Quality</h3>
+          <div id="aqContent"></div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-top:0;margin-bottom:8px">Extra Info</h3>
+          <div class="small">Timezone: <strong id="tz">--</strong></div>
+          <div class="small">Lat/Lon: <strong id="latlon">--</strong></div>
+          <div class="small">Region/Country: <strong id="region">--</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <footer>Tip: you can enter coordinates like "12.9716,77.5946" for Bangalore.</footer>
+  </div>
+
+  <script>
+    const API_KEY = '1ce0281545db48568c6150513252911';
+    const BASE = 'https://api.weatherapi.com/v1/current.json'; // HTTPS for GitHub Pages
+
+    const form = document.getElementById('searchForm');
+    const input = document.getElementById('locationInput');
+    const loadingEl = document.getElementById('loading');
+    const mainEl = document.getElementById('main');
+    const airCard = document.getElementById('airCard');
+
+    function showLoading(show){
+      loadingEl.style.display = show ? 'block' : 'none';
+      if(show){ mainEl.style.display = 'none'; airCard.style.display = 'none'; }
+    }
+
+    function showError(msg){
+      mainEl.style.display = 'block';
+      document.getElementById('tempC').textContent = '--°C';
+      document.getElementById('conditionText').textContent = msg;
+      document.getElementById('condIcon').src = '';
+      document.getElementById('lastUpdated').textContent = '';
+    }
+
+    function setAQIColor(val){
+      if(val <= 50) return '#16a34a';
+      if(val <= 100) return '#f59e0b';
+      if(val <= 150) return '#f97316';
+      if(val <= 200) return '#ef4444';
+      if(val <= 300) return '#9f1239';
+      return '#6b21a8';
+    }
+
+    async function fetchWeather(q){
+      showLoading(true);
+      try{
+        const url = `${BASE}?key=${API_KEY}&q=${encodeURIComponent(q)}&aqi=yes`;
+        const res = await fetch(url);
+        if(!res.ok){
+          const txt = await res.text();
+          throw new Error('Network response not ok: ' + res.status + ' - ' + txt);
+        }
+        const data = await res.json();
+
+        document.getElementById('tempC').textContent = Math.round(data.current.temp_c) + '°C';
+        document.getElementById('conditionText').textContent = data.current.condition.text;
+        document.getElementById('condIcon').src = 'https:' + data.current.condition.icon;
+        document.getElementById('localTime').textContent = 'Local time: ' + (data.location.localtime || '--');
+        document.getElementById('feelslike').textContent = Math.round(data.current.feelslike_c) + '°C';
+        document.getElementById('humidity').textContent = data.current.humidity + '%';
+        document.getElementById('wind').textContent = data.current.wind_kph + ' kph ' + (data.current.wind_dir || '');
+        document.getElementById('vis').textContent = (data.current.vis_km ?? '--') + ' km';
+        document.getElementById('uv').textContent = (data.current.uv ?? '--');
+        document.getElementById('cloud').textContent = (data.current.cloud ?? '--') + '%';
+        document.getElementById('locationName').textContent = data.location.name + ', ' + data.location.region + ' (' + data.location.country + ')';
+        document.getElementById('lastUpdated').textContent = 'Last updated: ' + (data.current.last_updated || '--');
+
+        document.getElementById('tz').textContent = data.location.tz_id || '--';
+        document.getElementById('latlon').textContent = data.location.lat + ', ' + data.location.lon;
+        document.getElementById('region').textContent = data.location.region + ' / ' + data.location.country;
+
+        const aq = data.current.air_quality || null;
+        const aqContent = document.getElementById('aqContent');
+        aqContent.innerHTML = '';
+        if(aq){
+          airCard.style.display = 'block';
+          const pollutants = {
+            'pm2_5': aq['pm2_5'],
+            'pm10': aq['pm10'],
+            'o3': aq['o3'],
+            'no2': aq['no2'],
+            'so2': aq['so2'],
+            'co': aq['co']
+          };
+          const aqIndex = aq['us-epa-index'] ?? aq['gb-defra-index'] ?? null;
+          let html = '';
+          if(aqIndex !== null){
+            const color = setAQIColor(aqIndex * 50);
+            html += `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div class="dot" style="background:${color}"></div><div>Air quality index: <strong>${aqIndex}</strong></div></div>`;
+          }
+          html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">';
+          for(const k in pollutants){
+            const val = pollutants[k];
+            html += `<div style="background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;font-size:13px;text-align:center">${k.toUpperCase()}<div style="font-weight:700;margin-top:6px">${val ? val.toFixed(2) : '--'}</div></div>`;
+          }
+          html += '</div>';
+          aqContent.innerHTML = html;
+        } else {
+          airCard.style.display = 'none';
+        }
+
+        mainEl.style.display = 'block';
+      } catch(err){
+        console.error(err);
+        showError('Could not fetch weather for "' + q + '".');
+      } finally{
+        showLoading(false);
+      }
+    }
+
+    form.addEventListener('submit', e =>{
+      e.preventDefault();
+      const q = input.value.trim();
+      if(!q) return;
+      fetchWeather(q);
+    });
+
+    fetchWeather(input.value.trim());
+  </script>
+</body>
+</html>
